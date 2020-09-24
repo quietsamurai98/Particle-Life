@@ -4,9 +4,9 @@ $PRESETS = {
         univ:  [9, 150, 1280, 720],
         rules: [-0.02, 0.06, 0.0, 20.0, 20.0, 70.0, 0.025, false]
     },
-    custom:       {
+    custom:         {
         univ:  [6, 150, 1280, 720],
-        rules: [-0.01, 0.06, 0.0, 20.0, 20.0, 40.0, 0.025, true ]
+        rules: [-0.01, 0.06, 0.0, 20.0, 20.0, 40.0, 0.025, true]
     },
     chaos:          {
         univ:  [6, 100, 1280, 720],
@@ -32,7 +32,7 @@ $PRESETS = {
         univ:  [4, 150, 1280, 720],
         rules: [0.0, 0.04, 10.0, 10.0, 10.0, 80.0, 0.05, true]
     },
-    clusters:{
+    clusters:       {
         univ:  [6, 150, 1280, 720],
         rules: [0.02, 0.05, 0.0, 20.0, 20.0, 50.0, 0.05, false]
     }
@@ -48,7 +48,7 @@ def tick args
   universe.toggle_wrap if args.inputs.keyboard.key_down.w
   universe.step
   universe.redraw
-  args.outputs.labels << {x: 10, y: 30, text: "FPS: #{$gtk.current_framerate.to_s.to_i}", r: 255, g: 0, b: 0}
+  args.outputs.labels << {x: 10, y: 30, text: "FPS: #{$gtk.current_framerate.to_s.to_i}", r: 255, g: 255, b: 255, a:64}
   args.outputs.labels << {x: 10, y: 60, text: "W", r: 255, g: 255, b: 255, a: 64} if universe.m_wrap == true
   args.outputs.background_color = [0, 0, 0]
 
@@ -56,7 +56,7 @@ def tick args
 end
 
 def big_bang_2(args, preset)
-  wrap = false
+  wrap = true
   if args.state.universe
     wrap = args.state.universe.m_wrap
   end
@@ -176,38 +176,12 @@ class Universe
   end
 
   def local_particles(p)
-    #return @m_particles
     max_r = @m_types.m_max_max_r[p.type]
+
+    # ...handling wrapping properly is hard, okay? :(
+    return @m_particles if @m_wrap && (p.x < max_r || p.y < max_r || @m_width - p.x < max_r || @m_height - p.y < max_r)
+
     [p.x - max_r, p.x, p.x + max_r].product([p.y - max_r, p.y, p.y + max_r]).flat_map do |xy|
-      x      = xy[0]
-      y      = xy[1]
-      wx, wy = x, y
-      if @m_wrap
-        wx += @m_width if wx < 0
-        wx -= @m_width if wx > @m_width
-        wy += @m_height if wy < 0
-        wy -= @m_height if wy > @m_height
-      end
-      out = [[wx, wy]]
-      xs  = [wx]
-      ys  = [wy]
-      if x != wx
-        xs << 0 if wx < @m_width / 2
-        xs << @m_width if wx > @m_width / 2
-      end
-      if y != wy
-        ys << 0 if wy < @m_height / 2
-        ys << @m_width if wy > @m_height / 2
-      end
-      if y != wy || x != wx
-        out = xs.flat_map do |xx|
-          ys.map do |yy|
-            [xx, yy]
-          end
-        end
-      end
-      out
-    end.flat_map do |xy|
       bin_x, bin_y = bin_dex(*xy)
       # $args.outputs.lines << [p.x,p.y,*xed_nib(bin_x,bin_y),255,255,255]
       out = []
@@ -336,10 +310,8 @@ class Universe
       p.vx           = 0 if p.vx.abs < 0.000001
       p.vy           = 0 if p.vy.abs < 0.000001
       if @m_wrap
-        p.x += @m_width if p.x < 0.0
-        p.x -= @m_width if p.x > @m_width
-        p.y += @m_height if p.y < 0.0
-        p.y -= @m_height if p.y > @m_height
+        p.x %= @m_width
+        p.y %= @m_height
       else
         if p.x <= RADIUS
           p.vx = -p.vx
@@ -406,8 +378,8 @@ class Universe
             p.x  = (rand_uni.rand(@m_rand_gen)) * @m_width
             p.y  = (rand_uni.rand(@m_rand_gen)) * @m_height
             cond = @m_particles.map do |q|
-              dx    = q.x - p.x
-              dy    = q.y - p.y
+              dx = q.x - p.x
+              dy = q.y - p.y
               if @m_wrap
                 if dx > @m_width * 0.5
                   dx -= @m_width
@@ -427,7 +399,7 @@ class Universe
               if r2 == 0
                 0
               else
-                (r2 - min_r*min_r).lesser(max_r * max_r - r2)
+                (r2 - min_r * min_r).lesser(max_r * max_r - r2)
               end
             end.max
           end
