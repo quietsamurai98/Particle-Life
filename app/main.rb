@@ -37,7 +37,7 @@ $PRESETS = {
         rules: [0.02, 0.05, 0.0, 20.0, 20.0, 50.0, 0.05, false]
     }
 }
-
+$MAX_STEPS = 1
 def tick args
   preset = $PRESETS[:custom_gliders]
 
@@ -46,7 +46,11 @@ def tick args
   universe            = args.state.universe
   repopulate(universe, args) if args.inputs.keyboard.key_down.enter
   universe.toggle_wrap if args.inputs.keyboard.key_down.w
-  universe.step
+  stepper = 0
+  while stepper < $MAX_STEPS
+    stepper += 1
+    universe.step
+  end
   universe.redraw
   args.outputs.labels << {x: 10, y: 30, text: "FPS: #{$gtk.current_framerate.to_s.to_i}", r: 255, g: 255, b: 255, a:64}
   args.outputs.labels << {x: 10, y: 60, text: "W", r: 255, g: 255, b: 255, a: 64} if universe.m_wrap == true
